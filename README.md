@@ -17,3 +17,4 @@ In the second window, run
 ```bash
 python3 client.py localhost <port>
 ```
+where the two port numbers must match.
