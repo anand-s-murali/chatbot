@@ -21,7 +21,9 @@ import random
 TEXT_FILE = "text.txt"
 MAXLINE = 1024 # this will be the largest stream the server (and ultimately the client) will be able to receive at a given time
 encoding = "utf-8"
-
+CHUNKS = 1
+fail_messages = ["I'm sorry, I do not understand.", "Dude, what?", "I'm a computer, and even I can't comprehend you just said.", "speak English!"]
+PUNC = ['.', '?', '!']
 
 '''
 Get the number of bytes in a string.
@@ -33,13 +35,26 @@ def get_bytes(s):
 '''
 Creates the markov sentence.
 @param {dictionary} data The word mappings to be used.
+@param {list} buff The client's last message
 @return {string} The final sentence.
 '''
-def generate_sentence(data):
-    # start from a random key
-    key = random.choice(list(data.keys()))
+def generate_sentence(data, buff):
+    # start from a random key originating from a random word from user's message
+    key = buff[0] 
+    if any(char in PUNC for char in key):
+        key = key[:len(key)-1]
+
+    if key == "hello":
+        return "Hello! I am ChatBot!"
+
+    # check if this word exists in the map
+    if key not in data.keys():
+        return random.choice(fail_messages)
+
+    # otherwise make sentence
     sentence = [key] # will be used to store our final sentence
-    punc = ['.', '?', '!']
+    key = random.choice(list(data.keys()))
+
     while len(sentence) < 15:
         # get a random value from our key's list and add key, value to sentence
         value = random.choice(data[key])
@@ -49,8 +64,11 @@ def generate_sentence(data):
         key = value
 
     # return final sentence!
-    return " ".join(sentence)+random.choice(punc)
+    sentence[0] = sentence[0].capitalize()
 
+    if sentence[len(sentence)-1] == "and" or sentence[len(sentence)-1] == "the":
+        sentence = sentence[0:len(sentence)-1]
+    return " ".join(sentence)+random.choice(PUNC)
 
 '''
 Handles all communication with the client (sends and receives messages).
@@ -74,13 +92,13 @@ def handle_client(clientfd, data):
         if(bytes_recv == 0):
             return
 
-        buff = buff.decode("utf-8")
+        buff = buff.decode("utf-8").split()
         print("Received message ({}) consisting of {} bytes from client.".format(buff, bytes_recv))
         
         #print("Attempting to reverse message ({}) for client...".format(buff))
         # reverse the string
         #buff = buff[::-1]
-        buff = generate_sentence(data)
+        buff = generate_sentence(data,buff)
 
         # send back to client
         bytes_sent = get_bytes(buff)
@@ -90,34 +108,31 @@ def handle_client(clientfd, data):
 
 '''
 "Trains" the ai by reading our text file and making a word mapping.
+@param {int} chunk The size of our keys (in words)
 @return {dictionary} The final word dictionary
 '''
-def train():
+def train(chunk=1):
     # open the file
     try:
         data = defaultdict(list)
         words = []
-        punc = ",.?!"
-        with open(TEXT_FILE, "r") as f:
-            # get all the words and make them lowercase
-            words = f.read().split()
-            # get rid of punctuation
-            for i in range(len(words)):
-                words[i] = words[i].replace(',','')
-                words[i] = words[i].replace('\"','')
-                words[i] = words[i].replace('\'','')
-                words[i] = words[i].replace('.','')
-                words[i] = words[i].lower()
-            for i in range(len(words)-1):
-                # check for punc
-                if any(char in punc for char in words[i]):
-                    continue
-                # add pair to map
-                data[words[i]].append(words[i+1])
+        with open(TEXT_FILE, "r") as fp:
+            # get all the words in the file
+            words = fp.read().split()
+            
+            # add words to the map
+            for i in range(len(words)-chunk):
+                key = ""
+                for j in range(chunk):
+                    key += words[i+j]+" "
+                key = key.rstrip()
+                value = words[i+chunk]
 
-            # remove duplicates from each list
+                data[key].append(value)
+
+            # get rid of possible duplicates
             for k,v in data.items():
-                data[k] = list(set(v))
+                data[k] = list(set(data[k]))
 
             return data
     except Exception as e:
@@ -139,11 +154,14 @@ def main():
     port = int(sys.argv[1])
 
     # need to "train" our ai
-    data = train()
+    data = train(CHUNKS)
 
     try:
         # create the socket; using tcp connection
         server_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM, 0)
+
+        # gets rid of Bind error: port already in use
+        server_sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     
         # bind the socket to the port given by user
         server_sock.bind(("", port))
