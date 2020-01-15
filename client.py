@@ -15,7 +15,7 @@ import errno
 import sys
 
 MAXLINE = 1024 # this will be the largest stream the server (and client) will be able to receive at a given time
-encoding = "utf-8" # encoding usage
+encoding = 'utf-8' # encoding usage
 
 
 '''
@@ -23,21 +23,21 @@ Get the number of bytes in a string.
 @param {string} s The string to get bytes of.
 '''
 def get_bytes(s):
-    return len(s.encode("utf-8"))
+    return len(s.encode('utf-8'))
 
 '''
-All code "starts" here.
+All code 'starts' here.
 '''
 def main():
     bytes_sent = -1 # the total bytes sent to server
     bytes_recv = -1 # the total bytes received by server
-    buff = "" # will store the message(s) going to/coming from the server
+    buff = '' # will store the message(s) going to/coming from the server
 
     # follows the instructions above!
 
     # check for usage
     if(len(sys.argv) < 3):
-        print("usage: python3 {} <hostname> <port>\n".format(sys.argv[0]))
+        print('usage: python3 {} <hostname> <port>\n'.format(sys.argv[0]))
         sys.exit(1)
 
     # get hostname and port information from system
@@ -57,7 +57,7 @@ def main():
         buff = buff.decode(encoding)
         print(buff)
 
-        print("You: ",end="")
+        print('You: ',end='')
         sys.stdout.flush()
 
         # now we may send/receive information from the server!
@@ -66,7 +66,7 @@ def main():
             buff = line.rstrip()
             
             # check if we need to quit
-            if(buff == "exit"):
+            if(buff == 'exit'):
                 break
             
             # send message to server
@@ -77,10 +77,10 @@ def main():
             buff = sock.recv(MAXLINE)
             bytes_recv = len(buff)
             buff = buff.decode(encoding)
-            print("ChatBot: {}".format(buff))
+            print('ChatBot: {}'.format(buff))
 
             # repeat!
-            print("You: ",end="")
+            print('You: ',end='')
             sys.stdout.flush()
 
 
@@ -90,5 +90,5 @@ def main():
         print(e)
         sys.exit(1)
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     main()
