@@ -117,10 +117,10 @@ def train():
                     # add to table
                     data[line[i]].append(line[i+1]) 
                 last_word = line[len(line)-1]
-                
+                # need to end last word of every line with flag (just in case!)
+                data[last_word].append(flag)
                 line = fp.readline().split()
             
-            data[last_word].append(flag)
 
             # remove duplicates from lists
             for k,v in data.items():
